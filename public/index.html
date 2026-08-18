@@ -34,14 +34,21 @@
         --r-btn: 16px;
         --r-pill: 999px;
         --r-tag: 12px;
+
+        /* Motion, straight from the design brief: micro 150-250ms, standard 300ms,
+     celebration 450-600ms. Nothing over 600ms, nothing under 100ms. Every
+     duration on this page comes from one of these three. */
+        --t-micro: 200ms;
+        --t-std: 300ms;
+        --t-cel: 520ms;
+        --ease: cubic-bezier(0.22, 0.68, 0.36, 1); /* settles like the app's springs */
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
       }
       * {
         box-sizing: border-box;
         margin: 0;
         padding: 0;
       }
-      /* scroll-padding keeps an anchor target clear of the 68px sticky nav. Without
-   it a keyboard user tabbing to #faq lands behind the bar — WCAG 2.4.11. */
       html {
         scroll-behavior: smooth;
         scroll-padding-top: 88px;
@@ -63,20 +70,17 @@
         color: inherit;
       }
 
-      /* Focus. Ink clears 3:1 on every light surface (cream 16.29:1, card, marigold
-   10.18:1); the two dark surfaces — .band and footer — swap to marigold, which
-   is 10.99:1 on inkDeep. :focus-visible so a mouse click doesn't draw a ring. */
       :focus-visible {
         outline: 3px solid var(--ink);
         outline-offset: 3px;
         border-radius: 6px;
       }
       .band :focus-visible,
-      footer :focus-visible {
+      footer :focus-visible,
+      .gallery :focus-visible {
         outline-color: var(--marigold);
       }
 
-      /* Keyboard users shouldn't have to tab the whole nav on every page load. */
       .skip {
         position: absolute;
         left: -9999px;
@@ -92,6 +96,26 @@
       }
       .skip:focus {
         left: 0;
+      }
+
+      /* ── scroll reveal ──────────────────────────────────────────────────────────
+   transform + opacity only; both are compositor-friendly and neither triggers
+   layout. Elements start visible to a non-JS reader and are only hidden once
+   the observer is known to be running, so a script failure degrades to plain
+   content rather than a blank page. */
+      .js-reveal .rv {
+        opacity: 0;
+        transform: translate3d(0, 18px, 0);
+      }
+      .rv {
+        transition:
+          opacity var(--t-std) var(--ease-out),
+          transform var(--t-std) var(--ease-out);
+        transition-delay: var(--rd, 0ms);
+      }
+      .rv.in {
+        opacity: 1;
+        transform: none;
       }
 
       /* nav */
@@ -127,9 +151,25 @@
         font-weight: 600;
         font-size: 15px;
         opacity: 0.78;
+        /* 44pt floor. These are hidden below 620px, which is why an earlier
+           mobile-only tap-target pass reported them clean. */
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        transition: opacity var(--t-micro) var(--ease);
       }
       nav a.link:hover {
         opacity: 1;
+      }
+      /* Scroll progress. Decorative only — never the sole indicator of anything. */
+      .prog {
+        position: absolute;
+        left: 0;
+        bottom: -3px;
+        height: 3px;
+        background: var(--sunset);
+        width: var(--p, 0%);
+        transition: width 90ms linear;
       }
 
       /* buttons */
@@ -146,11 +186,14 @@
         text-decoration: none;
         cursor: pointer;
         box-shadow: 4px 4px 0 var(--ink);
-        transition: 0.12s;
+        transition:
+          transform var(--t-micro) var(--ease),
+          box-shadow var(--t-micro) var(--ease),
+          background var(--t-micro) var(--ease);
       }
       .btn:hover {
         transform: translate(-1px, -1px);
-        box-shadow: 5px 5px 0 var(--ink);
+        box-shadow: 6px 6px 0 var(--ink);
       }
       .btn:active {
         transform: translate(3px, 3px);
@@ -182,8 +225,8 @@
         content: '';
         position: absolute;
         inset: 0;
-        background: radial-gradient(circle at 78% 18%, #f5b94233, transparent 55%);
         pointer-events: none;
+        background: radial-gradient(circle at 78% 18%, #f5b94233, transparent 55%);
       }
       .hero {
         display: grid;
@@ -206,6 +249,22 @@
         letter-spacing: 0.3px;
         margin-bottom: 20px;
       }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--ink);
+        animation: pulse 2s var(--ease) infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.35;
+        }
+      }
       h1 {
         font-size: clamp(38px, 6.2vw, 62px);
         line-height: 1.02;
@@ -213,8 +272,26 @@
         font-weight: 800;
         margin-bottom: 18px;
       }
-      h1 .u {
-        background: linear-gradient(transparent 62%, var(--marigold) 62%);
+      .u {
+        position: relative;
+        display: inline-block;
+      }
+      /* The marigold swipe draws itself once, in celebration time. */
+      .u::after {
+        content: '';
+        position: absolute;
+        left: -0.04em;
+        right: -0.04em;
+        bottom: 0.08em;
+        height: 0.34em;
+        background: var(--marigold);
+        z-index: -1;
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform var(--t-cel) var(--ease-out) 220ms;
+      }
+      .u.in::after {
+        transform: scaleX(1);
       }
       .sub {
         font-size: 19px;
@@ -235,7 +312,13 @@
         margin-top: 14px;
       }
 
-      /* phone */
+      /* ── phones ─────────────────────────────────────────────────────────────────
+   Real 3D: a perspective container, preserve-3d children, and depth expressed
+   with translateZ rather than faked with shadows alone. No library. */
+      .stage {
+        perspective: 1400px;
+        perspective-origin: 50% 40%;
+      }
       .phone {
         width: 270px;
         max-width: 100%;
@@ -243,13 +326,30 @@
         background: var(--ink);
         border-radius: 38px;
         padding: 9px;
-        box-shadow: 10px 12px 0 #1a161422;
-        transform: rotate(2.5deg);
+        transform-style: preserve-3d;
+        box-shadow:
+          10px 12px 0 #1a161422,
+          0 30px 60px -30px #1a1614aa;
+        transform: rotateY(var(--ry, -9deg)) rotateX(var(--rx, 4deg)) translateZ(0);
+        transition: transform var(--t-cel) var(--ease-out);
+      }
+      .phone.float {
+        animation: float 6s var(--ease) infinite;
+      }
+      @keyframes float {
+        0%,
+        100% {
+          translate: 0 0;
+        }
+        50% {
+          translate: 0 -10px;
+        }
       }
       .screen {
         background: var(--card);
         border-radius: 30px;
         overflow: hidden;
+        transform: translateZ(1px);
       }
       .ph-top {
         padding: 16px 16px 10px;
@@ -267,6 +367,7 @@
         letter-spacing: -2px;
         line-height: 1.05;
         margin: 2px 0 3px;
+        font-variant-numeric: tabular-nums;
       }
       .ph-sub {
         font-size: 12px;
@@ -286,6 +387,8 @@
         border: 2.5px solid var(--ink);
         border-radius: 13px;
         padding: 9px 10px;
+        transform: translateZ(0);
+        transition: transform var(--t-micro) var(--ease);
       }
       .ph-tick {
         width: 5px;
@@ -297,9 +400,6 @@
         flex: 1;
         min-width: 0;
       }
-      /* These are spans inside a span. Without display:block the title and the
-   subtitle run together on one line — which is how the mockup rendered before
-   anyone opened the page. */
       .ph-t,
       .ph-s {
         display: block;
@@ -317,6 +417,7 @@
       .ph-v {
         font-size: 13px;
         font-weight: 800;
+        font-variant-numeric: tabular-nums;
       }
 
       /* sections */
@@ -358,6 +459,13 @@
         border-radius: var(--r-card);
         padding: 24px;
         box-shadow: 5px 5px 0 var(--ink);
+        transition:
+          transform var(--t-std) var(--ease),
+          box-shadow var(--t-std) var(--ease);
+      }
+      .card:hover {
+        transform: translate(-3px, -3px);
+        box-shadow: 9px 9px 0 var(--ink);
       }
       .card .ic {
         width: 46px;
@@ -398,6 +506,13 @@
         border-radius: var(--r-card);
         padding: 22px 24px;
         box-shadow: 5px 5px 0 var(--ink);
+        transition:
+          transform var(--t-std) var(--ease),
+          box-shadow var(--t-std) var(--ease);
+      }
+      .step:hover {
+        transform: translateX(4px);
+        box-shadow: 8px 5px 0 var(--ink);
       }
       .step .n {
         counter-increment: s;
@@ -426,6 +541,244 @@
         line-height: 1.55;
       }
 
+      /* ── the gallery: four screens in 3D ────────────────────────────────────── */
+      .gallery {
+        background: var(--ink);
+        color: var(--cream);
+        border-top: 3px solid var(--ink);
+      }
+      .gallery h2,
+      .gallery .kicker {
+        color: var(--cream);
+      }
+      .gallery .lede {
+        opacity: 0.8;
+      }
+      .rail {
+        margin-top: 46px;
+        perspective: 1600px;
+        perspective-origin: 50% 45%;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+        align-items: start;
+      }
+      /* Each screen sits at its own angle and depth, so the row reads as objects
+         in a space rather than four flat pictures side by side.
+
+         These selectors carry .rv deliberately. The shared reveal rule sets
+         `transform: none` at (0,2,0) specificity, which silently killed the
+         whole 3D arrangement when the slot relied on `.slot` alone at (0,1,0).
+         Naming both classes puts these at (0,3,0) so the two systems compose
+         instead of one quietly winning. */
+      .slot {
+        transform-style: preserve-3d;
+        transform: rotateY(var(--ry)) translateZ(var(--tz)) translateY(var(--ty));
+        transition: transform var(--t-cel) var(--ease-out);
+      }
+      /* Reveal: the screens arrive from depth and rotate into their resting
+         angle, rather than sliding up flat like the rest of the page. */
+      .js-reveal .slot.rv {
+        transform: rotateY(0deg) translateZ(-240px) translateY(26px);
+      }
+      .slot.rv.in {
+        transform: rotateY(var(--ry)) translateZ(var(--tz)) translateY(var(--ty));
+      }
+      .slot:nth-child(1) {
+        --ry: 16deg;
+        --tz: -70px;
+        --ty: 16px;
+      }
+      .slot:nth-child(2) {
+        --ry: 6deg;
+        --tz: 0px;
+        --ty: 0px;
+      }
+      .slot:nth-child(3) {
+        --ry: -6deg;
+        --tz: 0px;
+        --ty: 0px;
+      }
+      .slot:nth-child(4) {
+        --ry: -16deg;
+        --tz: -70px;
+        --ty: 16px;
+      }
+      /* Bring one forward. Specificity has to clear .slot.rv.in (0,3,0). */
+      .slot.rv.in:hover,
+      .slot.rv.in:focus-within,
+      .slot:hover,
+      .slot:focus-within {
+        --ry: 0deg;
+        --tz: 70px;
+        --ty: -10px;
+      }
+      .mini {
+        background: var(--ink-deep);
+        border: 3px solid var(--cream);
+        border-radius: 26px;
+        padding: 7px;
+        box-shadow: 0 26px 50px -24px #000;
+      }
+      .mini .sc {
+        background: var(--card);
+        color: var(--ink);
+        border-radius: 20px;
+        overflow: hidden;
+        min-height: 290px;
+        display: flex;
+        flex-direction: column;
+      }
+      .cap {
+        margin-top: 14px;
+        text-align: center;
+      }
+      .cap b {
+        display: block;
+        font-size: 14.5px;
+        font-weight: 800;
+        color: var(--marigold);
+      }
+      .cap span {
+        display: block;
+        font-size: 12.5px;
+        opacity: 0.75;
+        margin-top: 2px;
+        line-height: 1.45;
+      }
+
+      /* mini-screen furniture */
+      .m-bar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 11px 8px;
+      }
+      .m-greet {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: -0.2px;
+      }
+      .m-sub {
+        font-size: 9px;
+        opacity: 0.65;
+      }
+      .m-sec {
+        font-size: 8.5px;
+        font-weight: 800;
+        letter-spacing: 0.9px;
+        text-transform: uppercase;
+        opacity: 0.7;
+        padding: 0 11px;
+        margin-top: 4px;
+      }
+      .m-body {
+        padding: 6px 11px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 1;
+      }
+      .m-card {
+        background: #fff;
+        border: 2px solid var(--ink);
+        border-radius: 11px;
+        padding: 7px 8px;
+      }
+      .m-t {
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: -0.1px;
+      }
+      .m-s {
+        font-size: 8.5px;
+        opacity: 0.68;
+        margin-top: 1px;
+      }
+      .m-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .m-v {
+        margin-left: auto;
+        font-size: 10px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+      }
+      .m-band {
+        background: var(--marigold);
+        border: 2px solid var(--ink);
+        border-radius: 11px;
+        padding: 7px 8px;
+        display: flex;
+        gap: 7px;
+        align-items: center;
+      }
+      .m-band b {
+        font-size: 10.5px;
+        font-weight: 800;
+        display: block;
+      }
+      .m-band span {
+        font-size: 8px;
+        opacity: 0.8;
+        display: block;
+        line-height: 1.3;
+      }
+      .m-pill {
+        display: inline-block;
+        background: var(--mint);
+        border: 2px solid var(--ink);
+        border-radius: 999px;
+        padding: 2px 7px;
+        font-size: 8px;
+        font-weight: 800;
+      }
+      .m-pill.warn {
+        background: var(--sunset);
+      }
+      .m-big {
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: -1.2px;
+        font-variant-numeric: tabular-nums;
+      }
+      .m-tabs {
+        display: flex;
+        border-top: 2px solid var(--ink);
+        margin-top: auto;
+      }
+      .m-tab {
+        flex: 1;
+        padding: 6px 0;
+        text-align: center;
+        font-size: 7.5px;
+        font-weight: 800;
+        /* 0.5 put the inactive labels at 3.38:1. */
+        opacity: 0.8;
+      }
+      .m-tab.on {
+        opacity: 1;
+        background: var(--marigold);
+      }
+      .m-code {
+        background: var(--ink);
+        border-radius: 8px;
+        padding: 8px;
+        display: flex;
+        gap: 1.5px;
+        align-items: flex-end;
+        justify-content: center;
+        height: 44px;
+      }
+      .m-code i {
+        display: block;
+        width: 2px;
+        background: var(--cream);
+        border-radius: 1px;
+      }
+
       /* honesty band */
       .band {
         background: var(--ink);
@@ -440,19 +793,11 @@
       .band .lede {
         opacity: 0.78;
       }
-      /* Explicit 2x2, not auto-fit. There are exactly four of these and the
-   container is 952px inside its padding, which auto-fit resolves to three
-   columns — leaving the fourth stranded alone on a second row. */
       .band .grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 26px 34px;
         margin-top: 34px;
-      }
-      @media (max-width: 680px) {
-        .band .grid {
-          grid-template-columns: 1fr;
-        }
       }
       .band .grid h3 {
         font-size: 16px;
@@ -474,6 +819,10 @@
         padding: 18px 22px;
         margin-bottom: 12px;
         box-shadow: 4px 4px 0 var(--ink);
+        transition: box-shadow var(--t-micro) var(--ease);
+      }
+      details[open] {
+        box-shadow: 7px 7px 0 var(--ink);
       }
       details summary {
         font-weight: 800;
@@ -485,8 +834,6 @@
         gap: 16px;
         align-items: center;
         letter-spacing: -0.3px;
-        /* 44 not 28 — this is the whole disclosure control, and it was the smallest
-     tap target on the page; 44x44pt is our floor. */
         min-height: 44px;
       }
       details summary::-webkit-details-marker {
@@ -497,9 +844,11 @@
         font-size: 24px;
         font-weight: 800;
         line-height: 1;
+        transition: transform var(--t-micro) var(--ease);
       }
       details[open] summary::after {
         content: '–';
+        transform: rotate(180deg);
       }
       details p {
         font-size: 15px;
@@ -533,8 +882,6 @@
         flex-wrap: wrap;
         justify-content: center;
       }
-      /* An author display: beats the UA [hidden]{display:none}, so the success path
-   would hide nothing without this. */
       form[hidden] {
         display: none;
       }
@@ -548,10 +895,8 @@
         font-family: var(--font);
         font-size: 16px;
         color: var(--ink);
+        transition: box-shadow var(--t-micro) var(--ease);
       }
-      /* rgba(26,22,20,.68) is 6.06:1 on --card. The previous #1A161477 was 3.06:1,
-   below the 4.5:1 floor — a placeholder carries the format hint, so it counts
-   as text. */
       input[type='email']::placeholder {
         color: rgba(26, 22, 20, 0.68);
       }
@@ -562,8 +907,6 @@
         height: 1px;
         opacity: 0;
       }
-      /* Visually hidden but kept in the accessibility tree — for the email label,
-   which the centred single-field layout has no room to show. */
       .vh {
         position: absolute;
         width: 1px;
@@ -606,6 +949,7 @@
         display: inline-flex;
         align-items: center;
         min-height: 44px;
+        transition: opacity var(--t-micro) var(--ease);
       }
       footer a:hover {
         opacity: 1;
@@ -614,14 +958,39 @@
         flex: 1;
       }
 
+      @media (max-width: 900px) {
+        .rail {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 28px 20px;
+        }
+        /* Must match .slot:nth-child(n) at (0,2,0) — a plain .slot here is
+           (0,1,0) and loses, which left the cards rotated on narrow screens:
+           skewed captions and a section background that stopped short of the
+           right edge because a rotated child overflowed the viewport. */
+        .slot:nth-child(1),
+        .slot:nth-child(2),
+        .slot:nth-child(3),
+        .slot:nth-child(4) {
+          --ry: 0deg;
+          --tz: 0px;
+          --ty: 0px;
+        }
+      }
       @media (max-width: 820px) {
         .hero {
           grid-template-columns: 1fr;
           gap: 36px;
         }
+        /* The mockup follows the headline on narrow screens. `order` used to
+           sit on .phone, which stopped doing anything once .stage became the
+           grid item — so make the choice explicit rather than incidental. The
+           pitch earns the first screen; the artefact backs it up underneath. */
+        .stage {
+          order: 1;
+        }
         .phone {
-          transform: rotate(0);
-          order: -1;
+          --ry: 0deg;
+          --rx: 0deg;
         }
         header {
           padding: 48px 0 52px;
@@ -630,13 +999,24 @@
           padding: 56px 0;
         }
       }
-      /* The section links go last, not at 820px — between 620 and 820 there is still
-   room for them, and dropping nav early strands the only in-page navigation. */
+      @media (max-width: 680px) {
+        .band .grid {
+          grid-template-columns: 1fr;
+        }
+        .rail {
+          grid-template-columns: 1fr;
+          max-width: 300px;
+          margin-inline: auto;
+        }
+      }
       @media (max-width: 620px) {
         nav a.link {
           display: none;
         }
       }
+
+      /* Reduced motion: everything above becomes static. Nothing here conveys
+   meaning by movement alone, so removing all of it loses no information. */
       @media (prefers-reduced-motion: reduce) {
         html {
           scroll-behavior: auto;
@@ -649,8 +1029,31 @@
           transition-duration: 0.01ms !important;
           scroll-behavior: auto !important;
         }
+        .js-reveal .rv {
+          opacity: 1;
+          transform: none;
+        }
+        .phone,
+        .phone.float {
+          animation: none;
+          transform: none;
+        }
+        /* Must clear .slot.rv.in (0,3,0), or reduced motion would leave the
+           3D arrangement in place — a media query adds no specificity. */
+        .slot,
+        .js-reveal .slot.rv,
+        .slot.rv.in,
+        .slot.rv.in:hover,
+        .slot.rv.in:focus-within {
+          transform: none;
+        }
+        .u::after {
+          transform: scaleX(1);
+        }
         .btn:hover,
-        .btn:active {
+        .card:hover,
+        .step:hover,
+        .slot:hover {
           transform: none;
         }
       }
@@ -702,9 +1105,11 @@
         </a>
         <span class="sp"></span>
         <a class="link" href="#how">How it works</a>
+        <a class="link" href="#inside">Inside the app</a>
         <a class="link" href="#honest">What we don't do</a>
         <a class="link" href="#faq">FAQ</a>
         <a class="btn" href="#waitlist">Get early access</a>
+        <span class="prog" id="prog" aria-hidden="true"></span>
       </div>
     </nav>
 
@@ -712,61 +1117,69 @@
       <header>
         <div class="wrap hero">
           <div>
-            <span class="eyebrow">iPhone · free · in development</span>
-            <h1>Your rewards expire<br /><span class="u">quietly.</span></h1>
-            <p class="sub">
+            <span class="eyebrow rv"><span class="dot"></span>iPhone · free · in development</span>
+            <h1 class="rv" style="--rd: 60ms">
+              Your rewards expire<br /><span class="u">quietly.</span>
+            </h1>
+            <p class="sub rv" style="--rd: 120ms">
               You've got points at Chipotle, stars at Starbucks, a free sandwich waiting at
               Chick-fil-A. Purq keeps track of all of it and tells you what's about to disappear —
               before it does.
             </p>
-            <div class="cta-row">
+            <div class="cta-row rv" style="--rd: 180ms">
               <a class="btn" href="#waitlist">Get early access</a>
               <a class="btn ghost" href="#how">See how it works</a>
             </div>
-            <p class="note">
+            <p class="note rv" style="--rd: 240ms">
               No merchant passwords. Ever. <a href="#honest">Here's why that's possible.</a>
             </p>
           </div>
 
-          <div class="phone">
-            <div class="screen">
-              <div class="ph-top">
-                <div class="ph-lbl">Available right now</div>
-                <div class="ph-hero">$46.98</div>
-                <div class="ph-sub">7 programs · $4.75 expires tonight</div>
-              </div>
-              <div class="ph-list">
-                <div class="ph-row">
-                  <span class="ph-tick" style="background: #d64545"></span>
-                  <span class="ph-b"
-                    ><span class="ph-t">Free Chips &amp; Guac</span
-                    ><span class="ph-s">Chipotle · 11:59 pm</span></span
-                  >
-                  <span class="ph-v">$4.75</span>
+          <div class="stage">
+            <p class="vh">
+              Illustration: the Purq home screen showing $46.98 available across seven programmes,
+              with $4.75 expiring tonight and four rewards listed by deadline.
+            </p>
+            <div class="phone float" id="heroPhone" aria-hidden="true">
+              <div class="screen">
+                <div class="ph-top">
+                  <div class="ph-lbl">Available right now</div>
+                  <div class="ph-hero" id="tally" data-to="46.98">$0.00</div>
+                  <div class="ph-sub">7 programs · $4.75 expires tonight</div>
                 </div>
-                <div class="ph-row">
-                  <span class="ph-tick" style="background: #e8743b"></span>
-                  <span class="ph-b"
-                    ><span class="ph-t">Free sandwich</span
-                    ><span class="ph-s">Chick-fil-A · tomorrow</span></span
-                  >
-                  <span class="ph-v">$5.29</span>
-                </div>
-                <div class="ph-row">
-                  <span class="ph-tick" style="background: #f5b942"></span>
-                  <span class="ph-b"
-                    ><span class="ph-t">20% member offer</span
-                    ><span class="ph-s">3 days left</span></span
-                  >
-                  <span class="ph-v">~$18</span>
-                </div>
-                <div class="ph-row">
-                  <span class="ph-tick" style="background: #2fb49c"></span>
-                  <span class="ph-b"
-                    ><span class="ph-t">$10 reward ready</span
-                    ><span class="ph-s">9 days</span></span
-                  >
-                  <span class="ph-v">$10.00</span>
+                <div class="ph-list">
+                  <div class="ph-row">
+                    <span class="ph-tick" style="background: #d64545"></span>
+                    <span class="ph-b"
+                      ><span class="ph-t">Free Chips &amp; Guac</span
+                      ><span class="ph-s">Chipotle · 11:59 pm</span></span
+                    >
+                    <span class="ph-v">$4.75</span>
+                  </div>
+                  <div class="ph-row">
+                    <span class="ph-tick" style="background: #e8743b"></span>
+                    <span class="ph-b"
+                      ><span class="ph-t">Free sandwich</span
+                      ><span class="ph-s">Chick-fil-A · tomorrow</span></span
+                    >
+                    <span class="ph-v">$5.29</span>
+                  </div>
+                  <div class="ph-row">
+                    <span class="ph-tick" style="background: #f5b942"></span>
+                    <span class="ph-b"
+                      ><span class="ph-t">20% member offer</span
+                      ><span class="ph-s">3 days left</span></span
+                    >
+                    <span class="ph-v">~$18</span>
+                  </div>
+                  <div class="ph-row">
+                    <span class="ph-tick" style="background: #2fb49c"></span>
+                    <span class="ph-b"
+                      ><span class="ph-t">$10 reward ready</span
+                      ><span class="ph-s">9 days</span></span
+                    >
+                    <span class="ph-v">$10.00</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -776,16 +1189,16 @@
 
       <section id="problem">
         <div class="wrap">
-          <div class="kicker">The problem</div>
-          <h2>Nobody knows what they already own.</h2>
-          <p class="lede">
+          <div class="kicker rv">The problem</div>
+          <h2 class="rv" style="--rd: 60ms">Nobody knows what they already own.</h2>
+          <p class="lede rv" style="--rd: 120ms">
             The average person is in seven or eight loyalty programs and can't name the balance of
             one. Points expire. Offers lapse. Free food goes uneaten. Not because people don't care
             — because nothing tells them.
           </p>
 
           <div class="cards">
-            <div class="card">
+            <div class="card rv">
               <div class="ic" style="background: #e8743b">
                 <svg
                   width="22"
@@ -809,7 +1222,7 @@
                 what disappears first, because that's the only thing worth interrupting you for.
               </p>
             </div>
-            <div class="card">
+            <div class="card rv" style="--rd: 90ms">
               <div class="ic" style="background: #2fb49c">
                 <svg
                   width="22"
@@ -836,7 +1249,7 @@
                 impressive.
               </p>
             </div>
-            <div class="card">
+            <div class="card rv" style="--rd: 180ms">
               <div class="ic" style="background: #f5b942">
                 <svg
                   width="22"
@@ -866,11 +1279,11 @@
 
       <section id="how">
         <div class="wrap">
-          <div class="kicker">How it works</div>
-          <h2>Three steps, then it runs itself.</h2>
+          <div class="kicker rv">How it works</div>
+          <h2 class="rv" style="--rd: 60ms">Three steps, then it runs itself.</h2>
 
           <div class="steps">
-            <div class="step">
+            <div class="step rv">
               <span class="n"></span>
               <div>
                 <h3>Forward your reward emails</h3>
@@ -881,7 +1294,7 @@
                 </p>
               </div>
             </div>
-            <div class="step">
+            <div class="step rv" style="--rd: 90ms">
               <span class="n"></span>
               <div>
                 <h3>Set your balances once</h3>
@@ -891,7 +1304,7 @@
                 </p>
               </div>
             </div>
-            <div class="step">
+            <div class="step rv" style="--rd: 180ms">
               <span class="n"></span>
               <div>
                 <h3>Get told before it's gone</h3>
@@ -906,17 +1319,276 @@
         </div>
       </section>
 
-      <section class="band" id="honest">
+      <section class="gallery" id="inside">
         <div class="wrap">
-          <div class="kicker">Being straight with you</div>
-          <h2>What Purq deliberately doesn't do.</h2>
-          <p class="lede">
+          <div class="kicker rv">Inside the app</div>
+          <h2 class="rv" style="--rd: 60ms">Four tabs. No filler.</h2>
+          <p class="lede rv" style="--rd: 120ms">
+            Purq is being built now, so these are the designed screens rather than App Store
+            screenshots — we'd rather show you the real thing than a render of something we haven't
+            made. Hover or tap one to bring it forward.
+          </p>
+
+          <div class="rail">
+            <div class="slot rv">
+              <div class="mini" aria-hidden="true">
+                <div class="sc">
+                  <div class="m-bar">
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 100 100"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <ellipse
+                        cx="50"
+                        cy="56"
+                        rx="27"
+                        ry="24"
+                        fill="#F5B942"
+                        stroke="#1A1614"
+                        stroke-width="6"
+                      />
+                      <path
+                        d="M28 40 L24 18 L46 31 Z M72 40 L76 18 L54 31 Z"
+                        fill="#F5B942"
+                        stroke="#1A1614"
+                        stroke-width="6"
+                        stroke-linejoin="round"
+                      />
+                      <circle cx="40" cy="53" r="4.5" fill="#1A1614" />
+                      <circle cx="60" cy="53" r="4.5" fill="#1A1614" />
+                    </svg>
+                    <div>
+                      <div class="m-greet">Evening, Satvik</div>
+                      <div class="m-sub">4-day streak · 2 expiring</div>
+                    </div>
+                  </div>
+                  <div class="m-sec" style="color: #7a1f1f; opacity: 1">Expiring soon</div>
+                  <div class="m-body">
+                    <div class="m-card" style="border-color: #d64545">
+                      <div class="m-row">
+                        <div>
+                          <div class="m-t">Free Chips &amp; Guac</div>
+                          <div class="m-s">Chipotle · 11:59 pm</div>
+                        </div>
+                        <div class="m-v">$4.75</div>
+                      </div>
+                    </div>
+                    <div class="m-band">
+                      <svg
+                        width="26"
+                        height="26"
+                        viewBox="0 0 100 100"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <ellipse
+                          cx="50"
+                          cy="56"
+                          rx="27"
+                          ry="24"
+                          fill="#FFF9EC"
+                          stroke="#1A1614"
+                          stroke-width="6"
+                        />
+                        <path
+                          d="M28 40 L24 18 L46 31 Z M72 40 L76 18 L54 31 Z"
+                          fill="#FFF9EC"
+                          stroke="#1A1614"
+                          stroke-width="6"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M34 49 l6 6 M46 49 l-6 6 M54 49 l6 6 M66 49 l-6 6"
+                          stroke="#1A1614"
+                          stroke-width="5"
+                          stroke-linecap="round"
+                        />
+                      </svg>
+                      <div>
+                        <b>Catch of the Day</b
+                        ><span>Purq's one pick, if you only do one thing</span>
+                      </div>
+                    </div>
+                    <div class="m-card">
+                      <div class="m-t">$12 off delivery over $30</div>
+                      <div class="m-s">Noodle Bar · ends Sunday</div>
+                      <div style="margin-top: 5px"><span class="m-pill">Worth it</span></div>
+                    </div>
+                  </div>
+                  <div class="m-tabs">
+                    <div class="m-tab on">Today</div>
+                    <div class="m-tab">Browse</div>
+                    <div class="m-tab">Stash</div>
+                    <div class="m-tab">Pile</div>
+                  </div>
+                </div>
+              </div>
+              <div class="cap">
+                <b>Today</b><span>What's worth your attention, in order. Expiring first.</span>
+              </div>
+            </div>
+
+            <div class="slot rv" style="--rd: 90ms">
+              <div class="mini" aria-hidden="true">
+                <div class="sc">
+                  <div class="m-bar">
+                    <div>
+                      <div class="m-greet">Free sandwich</div>
+                      <div class="m-sub">Chick-fil-A · tomorrow</div>
+                    </div>
+                  </div>
+                  <div class="m-body">
+                    <div class="m-card">
+                      <div class="m-s">Worth about</div>
+                      <div class="m-big">$5.29</div>
+                      <div class="m-s">est. — from your last receipt</div>
+                    </div>
+                    <div class="m-sec" style="padding: 0">Your member code</div>
+                    <div class="m-code" aria-hidden="true">
+                      <i style="height: 70%"></i><i style="height: 100%"></i
+                      ><i style="height: 45%"></i><i style="height: 85%"></i>
+                      <i style="height: 60%"></i><i style="height: 100%"></i
+                      ><i style="height: 35%"></i><i style="height: 75%"></i>
+                      <i style="height: 95%"></i><i style="height: 50%"></i
+                      ><i style="height: 80%"></i><i style="height: 65%"></i>
+                      <i style="height: 100%"></i><i style="height: 40%"></i
+                      ><i style="height: 90%"></i><i style="height: 55%"></i>
+                    </div>
+                    <div class="m-s">
+                      This identifies you. It doesn't authorise the discount — that stays in their
+                      app.
+                    </div>
+                  </div>
+                  <div class="m-tabs">
+                    <div class="m-tab on">Today</div>
+                    <div class="m-tab">Browse</div>
+                    <div class="m-tab">Stash</div>
+                    <div class="m-tab">Pile</div>
+                  </div>
+                </div>
+              </div>
+              <div class="cap">
+                <b>Redeem</b
+                ><span>Your code when it's genuinely yours. A hand-off when it isn't.</span>
+              </div>
+            </div>
+
+            <div class="slot rv" style="--rd: 180ms">
+              <div class="mini" aria-hidden="true">
+                <div class="sc">
+                  <div class="m-bar">
+                    <div>
+                      <div class="m-greet">Stash</div>
+                      <div class="m-sub">6 saved · 1 expiring</div>
+                    </div>
+                  </div>
+                  <div class="m-body">
+                    <div class="m-card">
+                      <div class="m-row">
+                        <div>
+                          <div class="m-t">8% back, whole run</div>
+                          <div class="m-s">Wilder Foods</div>
+                        </div>
+                        <div class="m-v">$12.40</div>
+                      </div>
+                    </div>
+                    <div class="m-card">
+                      <div class="m-row">
+                        <div>
+                          <div class="m-t">$10 reward ready</div>
+                          <div class="m-s">9 days left</div>
+                        </div>
+                        <div class="m-v">$10.00</div>
+                      </div>
+                    </div>
+                    <div class="m-card" style="border-color: #e8743b">
+                      <div class="m-row">
+                        <div>
+                          <div class="m-t">20% member offer</div>
+                          <div class="m-s">3 days left</div>
+                        </div>
+                        <div class="m-v">~$18</div>
+                      </div>
+                    </div>
+                    <div class="m-card">
+                      <div class="m-row">
+                        <div>
+                          <div class="m-t">Free drink, 150 ★</div>
+                          <div class="m-s">Starbucks</div>
+                        </div>
+                        <div class="m-v">$6.45</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="m-tabs">
+                    <div class="m-tab">Today</div>
+                    <div class="m-tab">Browse</div>
+                    <div class="m-tab on">Stash</div>
+                    <div class="m-tab">Pile</div>
+                  </div>
+                </div>
+              </div>
+              <div class="cap">
+                <b>Stash</b><span>The ones you kept. Nothing here expires without a word.</span>
+              </div>
+            </div>
+
+            <div class="slot rv" style="--rd: 270ms">
+              <div class="mini" aria-hidden="true">
+                <div class="sc">
+                  <div class="m-bar">
+                    <div>
+                      <div class="m-greet">The Purq Pile</div>
+                      <div class="m-sub">Earned, not estimated</div>
+                    </div>
+                  </div>
+                  <div class="m-body">
+                    <div class="m-card" style="background: #2fb49c">
+                      <div class="m-s" style="opacity: 0.8">purqs available</div>
+                      <div class="m-big">2,480</div>
+                      <div class="m-s" style="opacity: 0.8">= $24.80 at 1¢ per purq</div>
+                    </div>
+                    <div class="m-card">
+                      <div class="m-s">Still on its way</div>
+                      <div class="m-t" style="font-size: 13px">610 purqs</div>
+                      <div class="m-s">Wilder Foods clears 12 Sept</div>
+                    </div>
+                    <div class="m-s" style="opacity: 0.75">
+                      Kept separate from the dollar totals above, always. Two ledgers, never one
+                      number.
+                    </div>
+                  </div>
+                  <div class="m-tabs">
+                    <div class="m-tab">Today</div>
+                    <div class="m-tab">Browse</div>
+                    <div class="m-tab">Stash</div>
+                    <div class="m-tab on">Pile</div>
+                  </div>
+                </div>
+              </div>
+              <div class="cap">
+                <b>Purq Pile</b
+                ><span>Our own currency, counted exactly. Never mixed with the rest.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="band">
+        <div class="wrap">
+          <div class="kicker rv">Being straight with you</div>
+          <h2 id="honest" class="rv" style="--rd: 60ms">What Purq deliberately doesn't do.</h2>
+          <p class="lede rv" style="--rd: 120ms">
             Most apps in this category ask for something they shouldn't. Here's where we drew the
             lines, and why.
           </p>
 
           <div class="grid">
-            <div>
+            <div class="rv">
               <h3>We never ask for merchant passwords</h3>
               <p>
                 No Chipotle login, no Starbucks login, nothing to leak. Other trackers store those
@@ -924,14 +1596,14 @@
                 designed a place to put one.
               </p>
             </div>
-            <div>
+            <div class="rv" style="--rd: 80ms">
               <h3>We never read your inbox</h3>
               <p>
                 No Gmail sign-in, no mailbox access. You forward what you want us to see, to an
                 address that's yours alone. Works with Outlook and iCloud too.
               </p>
             </div>
-            <div>
+            <div class="rv" style="--rd: 160ms">
               <h3>We don't fake a barcode</h3>
               <p>
                 Where a merchant's code is genuinely yours, we show it. Where the reward lives
@@ -939,7 +1611,7 @@
                 an extra tap.
               </p>
             </div>
-            <div>
+            <div class="rv" style="--rd: 240ms">
               <h3>We tell you when we're guessing</h3>
               <p>
                 Some values are estimates and some dates are read by a machine. Those are marked,
@@ -952,10 +1624,10 @@
 
       <section id="faq">
         <div class="wrap">
-          <div class="kicker">Questions</div>
-          <h2>The ones worth asking.</h2>
+          <div class="kicker rv">Questions</div>
+          <h2 class="rv" style="--rd: 60ms">The ones worth asking.</h2>
           <div style="margin-top: 34px">
-            <details open>
+            <details class="rv" open>
               <summary>Is it free?</summary>
               <p>
                 Yes. The tracker costs us nothing to run, so it costs you nothing to use. If we ever
@@ -963,7 +1635,7 @@
                 free.
               </p>
             </details>
-            <details>
+            <details class="rv" style="--rd: 60ms">
               <summary>Which programs will work?</summary>
               <p>
                 Anything that emails you, which is most of them. Each one needs a parser written for
@@ -972,7 +1644,16 @@
                 waitlist requests. Coverage grows as we write parsers, not as you add accounts.
               </p>
             </details>
-            <details>
+            <details class="rv" style="--rd: 120ms">
+              <summary>What are purqs?</summary>
+              <p>
+                Our own currency, earned on offers you choose to use, redeemable in our catalogue at
+                a published rate. They're counted exactly and shown separately from your merchant
+                rewards — the app never adds the two into one flattering number, because one is
+                money someone else owes you and the other is money we owe you.
+              </p>
+            </details>
+            <details class="rv" style="--rd: 180ms">
               <summary>Do you sell my data?</summary>
               <p>
                 No, and the business model is the reason we can say that plainly: we plan to earn
@@ -981,14 +1662,14 @@
                 including exactly what this website holds today.
               </p>
             </details>
-            <details>
+            <details class="rv" style="--rd: 240ms">
               <summary>Android?</summary>
               <p>
                 Not yet. iPhone first, properly, because the Wallet and Lock Screen features are
                 most of what makes Purq useful and they don't port cleanly.
               </p>
             </details>
-            <details>
+            <details class="rv" style="--rd: 300ms">
               <summary>When does it launch?</summary>
               <p>
                 We're in build — nothing has shipped yet. Join the list and you'll get a TestFlight
@@ -1001,9 +1682,11 @@
 
       <section id="waitlist">
         <div class="wrap wl">
-          <h2>Stop losing free stuff.</h2>
-          <p>Join the early access list. One email when TestFlight opens, and nothing else.</p>
-          <form id="wl-form" novalidate>
+          <h2 class="rv">Stop losing free stuff.</h2>
+          <p class="rv" style="--rd: 60ms">
+            Join the early access list. One email when TestFlight opens, and nothing else.
+          </p>
+          <form id="wl-form" class="rv" style="--rd: 120ms" novalidate>
             <label class="vh" for="wl-email">Email address</label>
             <input
               type="email"
@@ -1040,6 +1723,103 @@
     </footer>
 
     <script>
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+
+      /* Reveal. The hiding class goes on only now, so a reader with JS disabled or a
+   script error still gets the full page rather than an empty one. */
+      if (!reduced) {
+        document.documentElement.classList.add('js-reveal')
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const e of entries) {
+              if (!e.isIntersecting) continue
+              e.target.classList.add('in')
+              io.unobserve(e.target) // reveal once; re-animating on scroll-back is nausea-inducing
+            }
+          },
+          { rootMargin: '0px 0px -12% 0px', threshold: 0.12 },
+        )
+        const targets = [...document.querySelectorAll('.rv, .u')]
+        targets.forEach((el) => io.observe(el))
+
+        // Safety net. The negative rootMargin puts the trigger line above the
+        // viewport bottom, so anything sitting inside that band on the *final*
+        // screen never crosses it and would stay invisible for good. Once the
+        // document is scrolled to the end there is nothing left to wait for.
+        const revealRest = () => {
+          if (innerHeight + scrollY < document.documentElement.scrollHeight - 2) return
+          targets.forEach((el) => el.classList.add('in'))
+          removeEventListener('scroll', revealRest)
+        }
+        addEventListener('scroll', revealRest, { passive: true })
+        revealRest()
+      } else {
+        document.querySelectorAll('.rv, .u').forEach((el) => el.classList.add('in'))
+      }
+
+      /* Scroll progress in the nav underline. Decorative — the same information is
+   already carried by the scrollbar. */
+      const prog = document.getElementById('prog')
+      let ticking = false
+      addEventListener(
+        'scroll',
+        () => {
+          if (ticking) return
+          ticking = true
+          requestAnimationFrame(() => {
+            const max = document.documentElement.scrollHeight - innerHeight
+            prog.style.setProperty('--p', max > 0 ? (scrollY / max) * 100 + '%' : '0%')
+            ticking = false
+          })
+        },
+        { passive: true },
+      )
+
+      /* Hero counter. Counts to the real figure the rows below add up to, in
+   celebration time — the brief's ceiling is 600ms and this sits under it. */
+      const tally = document.getElementById('tally')
+      if (tally && !reduced) {
+        const to = parseFloat(tally.dataset.to)
+        const run = (t0) => (now) => {
+          const p = Math.min((now - t0) / 560, 1)
+          const eased = 1 - Math.pow(1 - p, 3)
+          tally.textContent = '$' + (to * eased).toFixed(2)
+          if (p < 1) requestAnimationFrame(run(t0))
+        }
+        const once = new IntersectionObserver((es) => {
+          if (!es[0].isIntersecting) return
+          once.disconnect()
+          requestAnimationFrame((t) => requestAnimationFrame(run(t)))
+        })
+        once.observe(tally)
+      } else if (tally) {
+        tally.textContent = '$' + parseFloat(tally.dataset.to).toFixed(2)
+      }
+
+      /* Pointer parallax on the hero phone. Fine pointers only — on touch this would
+   fight the scroll, and it is skipped entirely under reduced motion. */
+      const phone = document.getElementById('heroPhone')
+      if (phone && !reduced && matchMedia('(pointer: fine)').matches && innerWidth > 820) {
+        const stage = phone.closest('.stage')
+        let raf = 0
+        stage.addEventListener('pointermove', (e) => {
+          if (raf) return
+          raf = requestAnimationFrame(() => {
+            const r = stage.getBoundingClientRect()
+            const dx = (e.clientX - r.left) / r.width - 0.5
+            const dy = (e.clientY - r.top) / r.height - 0.5
+            phone.style.setProperty('--ry', (-9 + dx * 14).toFixed(2) + 'deg')
+            phone.style.setProperty('--rx', (4 - dy * 12).toFixed(2) + 'deg')
+            raf = 0
+          })
+        })
+        stage.addEventListener('pointerleave', () => {
+          phone.style.removeProperty('--ry')
+          phone.style.removeProperty('--rx')
+        })
+      }
+
+      /* Waitlist */
       const f = document.getElementById('wl-form')
       const msg = document.getElementById('wl-msg')
       const btn = document.getElementById('wl-btn')
