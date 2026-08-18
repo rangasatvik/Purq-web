@@ -1,0 +1,14 @@
+{
+  "name": "purq-web",
+  "private": true,
+  "version": "0.0.0",
+  "description": "usepurq.com — static marketing site plus one Cloudflare Pages Function",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/waitlist.test.js",
+    "dev": "wrangler pages dev public --port 8788"
+  }
+}

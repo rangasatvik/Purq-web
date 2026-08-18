@@ -1,0 +1,7 @@
+# `wrangler pages dev` bundles the Function into here on every run.
+.wrangler/
+
+# Nothing here needs dependencies — see README. This is a guard, not a plan.
+node_modules/
+
+.DS_Store

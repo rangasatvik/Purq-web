@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy — Purq</title>
+    <meta name="description" content="What Purq collects, what it doesn't, and why." />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        --ink: #1a1614;
+        --cream: #fbf3e4;
+        --card: #fff9ec;
+        --marigold: #f5b942;
+        --mint: #2fb49c;
+        --font:
+          ui-rounded, 'SF Pro Rounded', 'Nunito', -apple-system, BlinkMacSystemFont, system-ui,
+          sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      /* Sticky nav is 66px. Without this, a keyboard user tabbing to an in-page
+   anchor lands behind it — WCAG 2.4.11 Focus Not Obscured. */
+      html {
+        scroll-padding-top: 84px;
+      }
+      body {
+        background: var(--cream);
+        color: var(--ink);
+        font-family: var(--font);
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      nav {
+        border-bottom: 3px solid var(--ink);
+        background: #fbf3e4;
+      }
+      nav .wrap {
+        display: flex;
+        align-items: center;
+        height: 66px;
+        gap: 14px;
+      }
+      .brand {
+        font-weight: 800;
+        font-size: 21px;
+        letter-spacing: -0.5px;
+        text-decoration: none;
+        color: inherit;
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+      }
+      nav .sp {
+        flex: 1;
+      }
+      nav a {
+        color: inherit;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 15px;
+        opacity: 0.75;
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+      }
+      main {
+        padding: 52px 0 80px;
+      }
+      h1 {
+        font-size: 40px;
+        letter-spacing: -1.5px;
+        font-weight: 800;
+        margin-bottom: 8px;
+      }
+      .upd {
+        opacity: 0.7;
+        font-size: 14.5px;
+        margin-bottom: 34px;
+      }
+      h2 {
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        margin: 36px 0 12px;
+      }
+      p {
+        margin-bottom: 14px;
+        opacity: 0.85;
+      }
+      ul {
+        margin: 0 0 16px 22px;
+      }
+      li {
+        margin-bottom: 8px;
+        opacity: 0.85;
+      }
+      strong {
+        font-weight: 800;
+      }
+      .box {
+        background: var(--card);
+        border: 3px solid var(--ink);
+        border-radius: 20px;
+        padding: 22px 24px;
+        margin: 26px 0;
+        box-shadow: 5px 5px 0 var(--ink);
+      }
+      .box h2 {
+        margin-top: 0;
+      }
+      .box.now {
+        background: var(--mint);
+      }
+      .box.now p,
+      .box.now li {
+        opacity: 1;
+      }
+      .draft {
+        background: #f5b942;
+        border: 3px solid var(--ink);
+        border-radius: 16px;
+        padding: 16px 20px;
+        margin-bottom: 32px;
+        font-weight: 700;
+        font-size: 15px;
+      }
+      a.inline {
+        color: inherit;
+        text-decoration: underline;
+        text-decoration-thickness: 2px;
+        text-underline-offset: 3px;
+      }
+      footer {
+        border-top: 3px solid var(--ink);
+        padding: 30px 0;
+        font-size: 14.5px;
+        opacity: 0.7;
+      }
+      footer .wrap {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        /* the links carry min-height:44px for tap targets, so without
+           this the copyright span sits off their baseline */
+        align-items: center;
+      }
+      footer a {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+      }
+
+      /* Focus. Ink clears 3:1 on every light surface here (16.29:1 on cream,
+   10.18:1 on marigold); the dark footer has no focusable content on this page.
+   :focus-visible so a mouse click doesn't draw a ring. */
+      :focus-visible {
+        outline: 3px solid var(--ink);
+        outline-offset: 3px;
+        border-radius: 4px;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="wrap">
+        <a class="brand" href="/">Purq</a><span class="sp"></span> <a href="/">Home</a
+        ><a href="/support">Support</a>
+      </div>
+    </nav>
+
+    <main>
+      <div class="wrap">
+        <h1>Privacy</h1>
+        <p class="upd">
+          Last updated 17 August 2026. Purq has not been released yet. This page will be revised
+          before the App Store submission, and again if the shipped app behaves differently from
+          what's described here.
+        </p>
+
+        <div class="draft">
+          ⚠️ Draft — not yet reviewed by counsel. Must be reviewed before App Store submission, and
+          must match the app's Privacy Nutrition Label and App Review Notes exactly.
+        </div>
+
+        <div class="box now">
+          <h2>What we hold today</h2>
+          <p>
+            Purq isn't out yet. There is no app to install, there are no accounts, and nothing
+            described further down this page is collecting anything right now.
+          </p>
+          <p>The only personal data we currently hold is what you give this website:</p>
+          <ul>
+            <li>The <strong>email address</strong> you type into the early access form.</li>
+            <li>
+              The <strong>country code</strong> our host attaches to the request, so we know roughly
+              where interest is coming from.
+            </li>
+            <li>The <strong>page that referred you</strong>, if there was one.</li>
+          </ul>
+          <p>
+            We use that once, to tell you when TestFlight opens. This site sets no cookies, runs no
+            analytics, and loads no third-party scripts. If you'd rather we didn't keep your
+            address, email
+            <a class="inline" href="mailto:support@usepurq.com">support@usepurq.com</a> and it's
+            gone.
+          </p>
+        </div>
+
+        <h2>What the app will collect when it ships</h2>
+        <p>
+          Everything below describes Purq as it's being built. None of it is happening yet. It's
+          here because a privacy policy people can read <em>before</em> they hand anything over is
+          worth more than one published the week of launch — and because we'd rather be held to it.
+        </p>
+
+        <p>
+          <strong>Your account.</strong> An email address, so there's something to attach your
+          rewards to. We'll describe exactly how sign-in works here once it's built, rather than
+          promise a mechanism we haven't chosen.
+        </p>
+
+        <p>
+          <strong>Emails you forward to us.</strong> Each account will get a private address such as
+          <code>you-a1b2@usepurq.com</code>. Messages sent there will be stored and parsed for
+          merchant, offer value, discount code and expiry date. We'll keep the original message so
+          we can fix a bad parse. We receive nothing you don't forward — there is no inbox
+          connection.
+        </p>
+
+        <p>
+          <strong>Loyalty balances you provide.</strong> Numbers you type in, or that we read from a
+          receipt you forwarded.
+        </p>
+
+        <p>
+          <strong>Offers you save or capture.</strong> Anything you deliberately share into Purq
+          from Messages, Mail or a screenshot.
+        </p>
+
+        <div class="box">
+          <h2>What we've decided not to collect</h2>
+          <p>These aren't gaps we haven't got to. They're the design.</p>
+          <ul>
+            <li>
+              <strong>Merchant account credentials.</strong> There will be no Chipotle or Starbucks
+              login inside Purq, so there's none for us to store and none to leak.
+            </li>
+            <li>
+              <strong>Inbox access.</strong> No Gmail, Outlook or iCloud permission of any kind. You
+              forward; we don't reach in.
+            </li>
+            <li>
+              <strong>Your location.</strong> Lock Screen reminders near a store are handled by
+              Apple Wallet, on your device. Purq never receives your position.
+            </li>
+            <li><strong>Contacts, photo library, health or financial account data.</strong></li>
+            <li><strong>Advertising identifiers, or any cross-app tracking.</strong></li>
+          </ul>
+        </div>
+
+        <h2>How we'll use it</h2>
+        <p>
+          To show you what you have and what's about to expire, to send the notifications you've
+          turned on, to keep your Wallet passes current, and to find broken parsers when something
+          is read wrong. That's the whole list. We don't sell personal information, and we don't
+          share it for cross-context behavioural advertising.
+        </p>
+
+        <h2>Who else sees it</h2>
+        <p>
+          We use service providers to run Purq — hosting, database and email delivery. They process
+          data on our instructions only. If we ever add something that changes what leaves our
+          systems, this page changes first.
+        </p>
+
+        <h2>How long we keep it</h2>
+        <p>
+          Waitlist addresses: until we've sent the launch email, or until you ask us to remove
+          yours. Account data, once accounts exist: while your account is open. Delete your account
+          and we remove your personal data, including forwarded messages, within 30 days, except
+          where we're legally required to retain something.
+        </p>
+
+        <h2>Deleting your account</h2>
+        <p>
+          When the app ships, in the app: <strong>Purq Pile → Delete account</strong>. It removes
+          the whole record, not just access. If it fails, email
+          <a class="inline" href="mailto:support@usepurq.com">support@usepurq.com</a> and we'll do
+          it by hand. Until then, there's nothing to delete but a waitlist entry, and the same
+          address will remove it.
+        </p>
+
+        <h2>Your rights</h2>
+        <p>
+          Depending on where you live, you may have the right to access, correct, delete or export
+          your data, and to opt out of its sale or sharing — which is straightforward for us, since
+          we do neither. Email
+          <a class="inline" href="mailto:support@usepurq.com">support@usepurq.com</a>.
+        </p>
+
+        <h2>Children</h2>
+        <p>Purq isn't directed at children under 13 and we don't knowingly collect their data.</p>
+
+        <h2>Changes</h2>
+        <p>
+          The section above about what the app will collect is going to change as the app gets built
+          — that's the point of publishing it early. Anything material, we'll date here, and once
+          the app exists we'll say so in it before a change takes effect.
+        </p>
+
+        <h2>Contact</h2>
+        <p><a class="inline" href="mailto:support@usepurq.com">support@usepurq.com</a></p>
+      </div>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <span>© 2026 Purq</span><a href="/">Home</a><a href="/support">Support</a>
+      </div>
+    </footer>
+  </body>
+</html>

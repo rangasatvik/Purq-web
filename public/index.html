@@ -1,0 +1,1092 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Purq — know what you're about to lose</title>
+    <meta
+      name="description"
+      content="Purq tracks the loyalty rewards you already have and tells you what's about to expire. One number, every program, before it's gone."
+    />
+    <meta property="og:title" content="Purq — know what you're about to lose" />
+    <meta property="og:description" content="Your rewards expire quietly. Purq doesn't let them." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://usepurq.com" />
+    <meta name="theme-color" content="#FBF3E4" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        --ink: #1a1614;
+        --cream: #fbf3e4;
+        --ink-deep: #0f0d0c;
+        --marigold: #f5b942;
+        --marigold-deep: #e89b2a;
+        --sunset: #e8743b;
+        --mint: #2fb49c;
+        --blush: #f09a7a;
+        --grape: #6b4e9e;
+        --alert: #d64545;
+        --card: #fff9ec;
+        --font:
+          ui-rounded, 'SF Pro Rounded', 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+          system-ui, sans-serif;
+        --r-card: 20px;
+        --r-btn: 16px;
+        --r-pill: 999px;
+        --r-tag: 12px;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      /* scroll-padding keeps an anchor target clear of the 68px sticky nav. Without
+   it a keyboard user tabbing to #faq lands behind the bar — WCAG 2.4.11. */
+      html {
+        scroll-behavior: smooth;
+        scroll-padding-top: 88px;
+      }
+      body {
+        background: var(--cream);
+        color: var(--ink);
+        font-family: var(--font);
+        -webkit-font-smoothing: antialiased;
+        line-height: 1.5;
+        overflow-x: hidden;
+      }
+      .wrap {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      a {
+        color: inherit;
+      }
+
+      /* Focus. Ink clears 3:1 on every light surface (cream 16.29:1, card, marigold
+   10.18:1); the two dark surfaces — .band and footer — swap to marigold, which
+   is 10.99:1 on inkDeep. :focus-visible so a mouse click doesn't draw a ring. */
+      :focus-visible {
+        outline: 3px solid var(--ink);
+        outline-offset: 3px;
+        border-radius: 6px;
+      }
+      .band :focus-visible,
+      footer :focus-visible {
+        outline-color: var(--marigold);
+      }
+
+      /* Keyboard users shouldn't have to tab the whole nav on every page load. */
+      .skip {
+        position: absolute;
+        left: -9999px;
+        top: 0;
+        z-index: 100;
+        background: var(--marigold);
+        color: var(--ink);
+        border: 3px solid var(--ink);
+        border-radius: 0 0 var(--r-btn) 0;
+        padding: 12px 20px;
+        font-weight: 800;
+        text-decoration: none;
+      }
+      .skip:focus {
+        left: 0;
+      }
+
+      /* nav */
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: #fbf3e4ee;
+        backdrop-filter: blur(12px);
+        border-bottom: 3px solid var(--ink);
+      }
+      nav .wrap {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 68px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 800;
+        font-size: 22px;
+        letter-spacing: -0.5px;
+        text-decoration: none;
+        min-height: 44px;
+      }
+      nav .sp {
+        flex: 1;
+      }
+      nav a.link {
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 15px;
+        opacity: 0.78;
+      }
+      nav a.link:hover {
+        opacity: 1;
+      }
+
+      /* buttons */
+      .btn {
+        display: inline-block;
+        background: var(--marigold);
+        color: var(--ink);
+        border: 3px solid var(--ink);
+        border-radius: var(--r-btn);
+        padding: 13px 22px;
+        font-family: var(--font);
+        font-weight: 800;
+        font-size: 16px;
+        text-decoration: none;
+        cursor: pointer;
+        box-shadow: 4px 4px 0 var(--ink);
+        transition: 0.12s;
+      }
+      .btn:hover {
+        transform: translate(-1px, -1px);
+        box-shadow: 5px 5px 0 var(--ink);
+      }
+      .btn:active {
+        transform: translate(3px, 3px);
+        box-shadow: 1px 1px 0 var(--ink);
+        background: var(--marigold-deep);
+      }
+      .btn:disabled {
+        opacity: 0.65;
+        cursor: default;
+        transform: none;
+        box-shadow: 4px 4px 0 var(--ink);
+      }
+      .btn.ghost {
+        background: transparent;
+        box-shadow: none;
+      }
+      .btn.ghost:hover {
+        background: #1a16140d;
+        transform: none;
+      }
+
+      /* hero */
+      header {
+        padding: 76px 0 64px;
+        position: relative;
+        overflow: hidden;
+      }
+      header::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 78% 18%, #f5b94233, transparent 55%);
+        pointer-events: none;
+      }
+      .hero {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 44px;
+        align-items: center;
+        position: relative;
+      }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--mint);
+        color: var(--ink);
+        border: 2.5px solid var(--ink);
+        border-radius: var(--r-pill);
+        padding: 6px 14px;
+        font-weight: 800;
+        font-size: 13px;
+        letter-spacing: 0.3px;
+        margin-bottom: 20px;
+      }
+      h1 {
+        font-size: clamp(38px, 6.2vw, 62px);
+        line-height: 1.02;
+        letter-spacing: -2px;
+        font-weight: 800;
+        margin-bottom: 18px;
+      }
+      h1 .u {
+        background: linear-gradient(transparent 62%, var(--marigold) 62%);
+      }
+      .sub {
+        font-size: 19px;
+        line-height: 1.55;
+        max-width: 30em;
+        opacity: 0.82;
+        margin-bottom: 28px;
+      }
+      .cta-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .note {
+        font-size: 13.5px;
+        opacity: 0.7;
+        margin-top: 14px;
+      }
+
+      /* phone */
+      .phone {
+        width: 270px;
+        max-width: 100%;
+        justify-self: center;
+        background: var(--ink);
+        border-radius: 38px;
+        padding: 9px;
+        box-shadow: 10px 12px 0 #1a161422;
+        transform: rotate(2.5deg);
+      }
+      .screen {
+        background: var(--card);
+        border-radius: 30px;
+        overflow: hidden;
+      }
+      .ph-top {
+        padding: 16px 16px 10px;
+      }
+      .ph-lbl {
+        font-size: 10.5px;
+        font-weight: 800;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        opacity: 0.7;
+      }
+      .ph-hero {
+        font-size: 44px;
+        font-weight: 800;
+        letter-spacing: -2px;
+        line-height: 1.05;
+        margin: 2px 0 3px;
+      }
+      .ph-sub {
+        font-size: 12px;
+        opacity: 0.7;
+      }
+      .ph-list {
+        padding: 6px 12px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      .ph-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        background: #fff;
+        border: 2.5px solid var(--ink);
+        border-radius: 13px;
+        padding: 9px 10px;
+      }
+      .ph-tick {
+        width: 5px;
+        height: 30px;
+        border-radius: 3px;
+        flex: 0 0 5px;
+      }
+      .ph-b {
+        flex: 1;
+        min-width: 0;
+      }
+      /* These are spans inside a span. Without display:block the title and the
+   subtitle run together on one line — which is how the mockup rendered before
+   anyone opened the page. */
+      .ph-t,
+      .ph-s {
+        display: block;
+      }
+      .ph-t {
+        font-size: 12.5px;
+        font-weight: 800;
+        letter-spacing: -0.2px;
+      }
+      .ph-s {
+        font-size: 10.5px;
+        opacity: 0.7;
+        margin-top: 1px;
+      }
+      .ph-v {
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      /* sections */
+      section {
+        padding: 74px 0;
+        border-top: 3px solid var(--ink);
+      }
+      .kicker {
+        font-size: 12.5px;
+        font-weight: 800;
+        letter-spacing: 1.4px;
+        text-transform: uppercase;
+        opacity: 0.7;
+        margin-bottom: 12px;
+      }
+      h2 {
+        font-size: clamp(28px, 4.2vw, 40px);
+        letter-spacing: -1.2px;
+        font-weight: 800;
+        line-height: 1.1;
+        margin-bottom: 16px;
+      }
+      .lede {
+        font-size: 18px;
+        opacity: 0.8;
+        max-width: 34em;
+        line-height: 1.6;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 18px;
+        margin-top: 38px;
+      }
+      .card {
+        background: var(--card);
+        border: 3px solid var(--ink);
+        border-radius: var(--r-card);
+        padding: 24px;
+        box-shadow: 5px 5px 0 var(--ink);
+      }
+      .card .ic {
+        width: 46px;
+        height: 46px;
+        border: 3px solid var(--ink);
+        border-radius: var(--r-tag);
+        display: grid;
+        place-items: center;
+        margin-bottom: 14px;
+      }
+      .card .ic svg {
+        display: block;
+      }
+      .card h3 {
+        font-size: 19px;
+        font-weight: 800;
+        letter-spacing: -0.4px;
+        margin-bottom: 7px;
+      }
+      .card p {
+        font-size: 15px;
+        opacity: 0.78;
+        line-height: 1.55;
+      }
+
+      .steps {
+        counter-reset: s;
+        margin-top: 38px;
+        display: grid;
+        gap: 16px;
+      }
+      .step {
+        display: flex;
+        gap: 18px;
+        align-items: flex-start;
+        background: var(--card);
+        border: 3px solid var(--ink);
+        border-radius: var(--r-card);
+        padding: 22px 24px;
+        box-shadow: 5px 5px 0 var(--ink);
+      }
+      .step .n {
+        counter-increment: s;
+        flex: 0 0 42px;
+        height: 42px;
+        background: var(--marigold);
+        border: 3px solid var(--ink);
+        border-radius: var(--r-pill);
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        font-size: 18px;
+      }
+      .step .n::before {
+        content: counter(s);
+      }
+      .step h3 {
+        font-size: 18px;
+        font-weight: 800;
+        margin-bottom: 5px;
+        letter-spacing: -0.3px;
+      }
+      .step p {
+        font-size: 15px;
+        opacity: 0.78;
+        line-height: 1.55;
+      }
+
+      /* honesty band */
+      .band {
+        background: var(--ink);
+        color: var(--cream);
+        border-top: 3px solid var(--ink);
+        border-bottom: 3px solid var(--ink);
+      }
+      .band h2,
+      .band .kicker {
+        color: var(--cream);
+      }
+      .band .lede {
+        opacity: 0.78;
+      }
+      /* Explicit 2x2, not auto-fit. There are exactly four of these and the
+   container is 952px inside its padding, which auto-fit resolves to three
+   columns — leaving the fourth stranded alone on a second row. */
+      .band .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 26px 34px;
+        margin-top: 34px;
+      }
+      @media (max-width: 680px) {
+        .band .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .band .grid h3 {
+        font-size: 16px;
+        font-weight: 800;
+        margin-bottom: 6px;
+        color: var(--marigold);
+      }
+      .band .grid p {
+        font-size: 14.5px;
+        opacity: 0.8;
+        line-height: 1.55;
+      }
+
+      /* faq */
+      details {
+        background: var(--card);
+        border: 3px solid var(--ink);
+        border-radius: var(--r-card);
+        padding: 18px 22px;
+        margin-bottom: 12px;
+        box-shadow: 4px 4px 0 var(--ink);
+      }
+      details summary {
+        font-weight: 800;
+        font-size: 16.5px;
+        cursor: pointer;
+        list-style: none;
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: center;
+        letter-spacing: -0.3px;
+        /* 44 not 28 — this is the whole disclosure control, and it was the smallest
+     tap target on the page; 44x44pt is our floor. */
+        min-height: 44px;
+      }
+      details summary::-webkit-details-marker {
+        display: none;
+      }
+      details summary::after {
+        content: '+';
+        font-size: 24px;
+        font-weight: 800;
+        line-height: 1;
+      }
+      details[open] summary::after {
+        content: '–';
+      }
+      details p {
+        font-size: 15px;
+        opacity: 0.8;
+        line-height: 1.6;
+        margin-top: 12px;
+      }
+
+      /* waitlist */
+      #waitlist {
+        background: var(--marigold);
+        border-top: 3px solid var(--ink);
+      }
+      .wl {
+        max-width: 560px;
+        margin: 0 auto;
+        text-align: center;
+      }
+      .wl h2 {
+        margin-bottom: 12px;
+      }
+      .wl p {
+        font-size: 17px;
+        opacity: 0.85;
+        margin-bottom: 26px;
+      }
+      form {
+        position: relative;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      /* An author display: beats the UA [hidden]{display:none}, so the success path
+   would hide nothing without this. */
+      form[hidden] {
+        display: none;
+      }
+      input[type='email'] {
+        flex: 1;
+        min-width: 250px;
+        background: var(--card);
+        border: 3px solid var(--ink);
+        border-radius: var(--r-btn);
+        padding: 14px 16px;
+        font-family: var(--font);
+        font-size: 16px;
+        color: var(--ink);
+      }
+      /* rgba(26,22,20,.68) is 6.06:1 on --card. The previous #1A161477 was 3.06:1,
+   below the 4.5:1 floor — a placeholder carries the format hint, so it counts
+   as text. */
+      input[type='email']::placeholder {
+        color: rgba(26, 22, 20, 0.68);
+      }
+      .hp {
+        position: absolute;
+        left: -9999px;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+      }
+      /* Visually hidden but kept in the accessibility tree — for the email label,
+   which the centred single-field layout has no room to show. */
+      .vh {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+      }
+      .msg {
+        margin-top: 18px;
+        font-weight: 700;
+        font-size: 15.5px;
+        min-height: 24px;
+      }
+      .msg:focus {
+        outline: none;
+      }
+      .msg.err {
+        color: #7a1f1f;
+      }
+
+      footer {
+        background: var(--ink-deep);
+        color: var(--cream);
+        padding: 44px 0 36px;
+        font-size: 14.5px;
+      }
+      footer .wrap {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      footer a {
+        opacity: 0.78;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+      }
+      footer a:hover {
+        opacity: 1;
+      }
+      footer .sp {
+        flex: 1;
+      }
+
+      @media (max-width: 820px) {
+        .hero {
+          grid-template-columns: 1fr;
+          gap: 36px;
+        }
+        .phone {
+          transform: rotate(0);
+          order: -1;
+        }
+        header {
+          padding: 48px 0 52px;
+        }
+        section {
+          padding: 56px 0;
+        }
+      }
+      /* The section links go last, not at 820px — between 620 and 820 there is still
+   room for them, and dropping nav early strands the only in-page navigation. */
+      @media (max-width: 620px) {
+        nav a.link {
+          display: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+        .btn:hover,
+        .btn:active {
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <nav>
+      <div class="wrap">
+        <a class="brand" href="/">
+          <!-- Purq's own mascot. No merchant marks anywhere on this site — App Store
+         guideline 5.2, and it applies to marketing as much as to the app.
+         The 5px ink stroke on every shape is LOAD-BEARING, not decoration:
+         cream on marigold is 1.60:1 and the cream head is 1.68:1, both far below
+         the 3:1 that WCAG 1.4.11 wants for a graphical object. The ink outline is
+         what supplies that boundary. Removing the strokes to "clean it up" makes
+         the logo an accessibility failure. -->
+          <svg width="34" height="34" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+            <rect
+              width="100"
+              height="100"
+              rx="24"
+              fill="#F5B942"
+              stroke="#1A1614"
+              stroke-width="6"
+            />
+            <path
+              d="M28 40 L24 16 L46 30 Z M72 40 L76 16 L54 30 Z"
+              fill="#FBF3E4"
+              stroke="#1A1614"
+              stroke-width="5"
+              stroke-linejoin="round"
+            />
+            <ellipse
+              cx="50"
+              cy="56"
+              rx="27"
+              ry="24"
+              fill="#FFF9EC"
+              stroke="#1A1614"
+              stroke-width="5"
+            />
+            <circle cx="40" cy="53" r="4" fill="#1A1614" />
+            <circle cx="60" cy="53" r="4" fill="#1A1614" />
+            <path d="M46 64 h8 l-4 5 z" fill="#E8743B" />
+          </svg>
+          Purq
+        </a>
+        <span class="sp"></span>
+        <a class="link" href="#how">How it works</a>
+        <a class="link" href="#honest">What we don't do</a>
+        <a class="link" href="#faq">FAQ</a>
+        <a class="btn" href="#waitlist">Get early access</a>
+      </div>
+    </nav>
+
+    <main id="main">
+      <header>
+        <div class="wrap hero">
+          <div>
+            <span class="eyebrow">iPhone · free · in development</span>
+            <h1>Your rewards expire<br /><span class="u">quietly.</span></h1>
+            <p class="sub">
+              You've got points at Chipotle, stars at Starbucks, a free sandwich waiting at
+              Chick-fil-A. Purq keeps track of all of it and tells you what's about to disappear —
+              before it does.
+            </p>
+            <div class="cta-row">
+              <a class="btn" href="#waitlist">Get early access</a>
+              <a class="btn ghost" href="#how">See how it works</a>
+            </div>
+            <p class="note">
+              No merchant passwords. Ever. <a href="#honest">Here's why that's possible.</a>
+            </p>
+          </div>
+
+          <div class="phone">
+            <div class="screen">
+              <div class="ph-top">
+                <div class="ph-lbl">Available right now</div>
+                <div class="ph-hero">$46.98</div>
+                <div class="ph-sub">7 programs · $4.75 expires tonight</div>
+              </div>
+              <div class="ph-list">
+                <div class="ph-row">
+                  <span class="ph-tick" style="background: #d64545"></span>
+                  <span class="ph-b"
+                    ><span class="ph-t">Free Chips &amp; Guac</span
+                    ><span class="ph-s">Chipotle · 11:59 pm</span></span
+                  >
+                  <span class="ph-v">$4.75</span>
+                </div>
+                <div class="ph-row">
+                  <span class="ph-tick" style="background: #e8743b"></span>
+                  <span class="ph-b"
+                    ><span class="ph-t">Free sandwich</span
+                    ><span class="ph-s">Chick-fil-A · tomorrow</span></span
+                  >
+                  <span class="ph-v">$5.29</span>
+                </div>
+                <div class="ph-row">
+                  <span class="ph-tick" style="background: #f5b942"></span>
+                  <span class="ph-b"
+                    ><span class="ph-t">20% member offer</span
+                    ><span class="ph-s">3 days left</span></span
+                  >
+                  <span class="ph-v">~$18</span>
+                </div>
+                <div class="ph-row">
+                  <span class="ph-tick" style="background: #2fb49c"></span>
+                  <span class="ph-b"
+                    ><span class="ph-t">$10 reward ready</span
+                    ><span class="ph-s">9 days</span></span
+                  >
+                  <span class="ph-v">$10.00</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section id="problem">
+        <div class="wrap">
+          <div class="kicker">The problem</div>
+          <h2>Nobody knows what they already own.</h2>
+          <p class="lede">
+            The average person is in seven or eight loyalty programs and can't name the balance of
+            one. Points expire. Offers lapse. Free food goes uneaten. Not because people don't care
+            — because nothing tells them.
+          </p>
+
+          <div class="cards">
+            <div class="card">
+              <div class="ic" style="background: #e8743b">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#1A1614"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3.2 2" />
+                </svg>
+              </div>
+              <h3>Loss, not balance</h3>
+              <p>
+                Other apps show you a number. Purq shows you a deadline. The home screen leads with
+                what disappears first, because that's the only thing worth interrupting you for.
+              </p>
+            </div>
+            <div class="card">
+              <div class="ic" style="background: #2fb49c">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#1A1614"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d="M12 3v18" />
+                  <path
+                    d="M16.5 7.5c0-1.7-2-2.7-4.5-2.7S7.5 5.9 7.5 7.8s2 2.6 4.5 3.2 4.5 1.3 4.5 3.2-2 3-4.5 3-4.5-1-4.5-2.7"
+                  />
+                </svg>
+              </div>
+              <h3>One honest total</h3>
+              <p>
+                Points, stars, punches and offers, all converted to what they're actually worth in
+                dollars. Estimates are labelled as estimates. We never inflate the number to look
+                impressive.
+              </p>
+            </div>
+            <div class="card">
+              <div class="ic" style="background: #f5b942">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#1A1614"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d="M19 10c0 5.2-7 12-7 12s-7-6.8-7-12a7 7 0 0 1 14 0Z" />
+                  <circle cx="12" cy="10" r="2.6" />
+                </svg>
+              </div>
+              <h3>It finds you</h3>
+              <p>
+                A Wallet pass on your Lock Screen when you're near the store. You don't have to
+                remember to open Purq — that's rather the point of it.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="how">
+        <div class="wrap">
+          <div class="kicker">How it works</div>
+          <h2>Three steps, then it runs itself.</h2>
+
+          <div class="steps">
+            <div class="step">
+              <span class="n"></span>
+              <div>
+                <h3>Forward your reward emails</h3>
+                <p>
+                  You get a private Purq address. Set one filter and the promos, receipts and expiry
+                  warnings merchants already send you get read for value, codes and dates. We never
+                  touch the rest of your inbox — we only see what you forward.
+                </p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="n"></span>
+              <div>
+                <h3>Set your balances once</h3>
+                <p>
+                  Type in what you've already got, or scan the points screen in a merchant's app to
+                  save the typing. After that your forwarded receipts keep it current on their own.
+                </p>
+              </div>
+            </div>
+            <div class="step">
+              <span class="n"></span>
+              <div>
+                <h3>Get told before it's gone</h3>
+                <p>
+                  One notification when something's about to expire. A Wallet pass that appears when
+                  you're near the store. Then you go use it — in the merchant's own app, the way
+                  they intended.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="honest">
+        <div class="wrap">
+          <div class="kicker">Being straight with you</div>
+          <h2>What Purq deliberately doesn't do.</h2>
+          <p class="lede">
+            Most apps in this category ask for something they shouldn't. Here's where we drew the
+            lines, and why.
+          </p>
+
+          <div class="grid">
+            <div>
+              <h3>We never ask for merchant passwords</h3>
+              <p>
+                No Chipotle login, no Starbucks login, nothing to leak. Other trackers store those
+                on their servers. There is no merchant credential in Purq to steal, because we never
+                designed a place to put one.
+              </p>
+            </div>
+            <div>
+              <h3>We never read your inbox</h3>
+              <p>
+                No Gmail sign-in, no mailbox access. You forward what you want us to see, to an
+                address that's yours alone. Works with Outlook and iCloud too.
+              </p>
+            </div>
+            <div>
+              <h3>We don't fake a barcode</h3>
+              <p>
+                Where a merchant's code is genuinely yours, we show it. Where the reward lives
+                inside their app, we hand you off and say so. One failure at a counter is worse than
+                an extra tap.
+              </p>
+            </div>
+            <div>
+              <h3>We tell you when we're guessing</h3>
+              <p>
+                Some values are estimates and some dates are read by a machine. Those are marked,
+                and they're kept out of your headline total until you confirm them.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq">
+        <div class="wrap">
+          <div class="kicker">Questions</div>
+          <h2>The ones worth asking.</h2>
+          <div style="margin-top: 34px">
+            <details open>
+              <summary>Is it free?</summary>
+              <p>
+                Yes. The tracker costs us nothing to run, so it costs you nothing to use. If we ever
+                charge, it'll be for something extra, and the thing you signed up for will stay
+                free.
+              </p>
+            </details>
+            <details>
+              <summary>Which programs will work?</summary>
+              <p>
+                Anything that emails you, which is most of them. Each one needs a parser written for
+                its particular email format, so we're starting with the ones people ask for most —
+                Chipotle, Starbucks, Chick-fil-A, Dunkin', Panera, Sephora — and adding from the
+                waitlist requests. Coverage grows as we write parsers, not as you add accounts.
+              </p>
+            </details>
+            <details>
+              <summary>Do you sell my data?</summary>
+              <p>
+                No, and the business model is the reason we can say that plainly: we plan to earn
+                from merchants paying for offers you choose to use. Nothing about you gets sold, now
+                or then. The <a href="/privacy">privacy page</a> says the same thing in more words,
+                including exactly what this website holds today.
+              </p>
+            </details>
+            <details>
+              <summary>Android?</summary>
+              <p>
+                Not yet. iPhone first, properly, because the Wallet and Lock Screen features are
+                most of what makes Purq useful and they don't port cleanly.
+              </p>
+            </details>
+            <details>
+              <summary>When does it launch?</summary>
+              <p>
+                We're in build — nothing has shipped yet. Join the list and you'll get a TestFlight
+                invite before the App Store release. Early testers genuinely shape what ships.
+              </p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section id="waitlist">
+        <div class="wrap wl">
+          <h2>Stop losing free stuff.</h2>
+          <p>Join the early access list. One email when TestFlight opens, and nothing else.</p>
+          <form id="wl-form" novalidate>
+            <label class="vh" for="wl-email">Email address</label>
+            <input
+              type="email"
+              id="wl-email"
+              name="email"
+              placeholder="you@example.com"
+              autocomplete="email"
+              required
+              aria-describedby="wl-msg"
+            />
+            <input
+              type="text"
+              class="hp"
+              name="website"
+              tabindex="-1"
+              autocomplete="off"
+              aria-hidden="true"
+            />
+            <button class="btn" type="submit" id="wl-btn">Join the list</button>
+          </form>
+          <div class="msg" id="wl-msg" role="status" aria-live="polite" tabindex="-1"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <span>© 2026 Purq</span>
+        <span class="sp"></span>
+        <a href="/privacy">Privacy</a>
+        <a href="/support">Support</a>
+        <a href="mailto:support@usepurq.com">support@usepurq.com</a>
+      </div>
+    </footer>
+
+    <script>
+      const f = document.getElementById('wl-form')
+      const msg = document.getElementById('wl-msg')
+      const btn = document.getElementById('wl-btn')
+      const emailField = document.getElementById('wl-email')
+
+      const fail = (text) => {
+        msg.className = 'msg err'
+        msg.textContent = text
+        btn.disabled = false
+        btn.textContent = 'Join the list'
+      }
+
+      f.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        const email = emailField.value.trim()
+        const website = f.website.value // honeypot
+        msg.className = 'msg'
+        msg.textContent = ''
+
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+          fail("That email doesn't look right — mind checking it?")
+          emailField.focus()
+          return
+        }
+
+        btn.disabled = true
+        btn.textContent = 'Adding…'
+        try {
+          const r = await fetch('/api/waitlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, website }),
+          })
+          if (r.ok) {
+            // Hiding the form would drop focus to <body> and strand a keyboard user,
+            // so focus moves to the status line before the form goes.
+            msg.textContent = "You're on the list. We'll email you once, when TestFlight opens."
+            f.hidden = true
+            msg.focus()
+          } else {
+            const b = await r.json().catch(() => ({}))
+            fail(b.error || 'Something broke on our end. Try again in a minute?')
+          }
+        } catch {
+          fail("Couldn't reach us — check your connection and try again.")
+        }
+      })
+    </script>
+  </body>
+</html>
