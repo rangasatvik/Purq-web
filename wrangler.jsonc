@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "purq-web",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-15",
+
+  // Static assets are served before the Worker runs, so `/`, `/privacy` and
+  // `/support` never reach src/index.js — only `/api/waitlist` and genuine
+  // misses do.
+  //
+  // html_handling "auto-trailing-slash" is what serves public/privacy.html at
+  // /privacy and 308s /privacy.html to it. Those extensionless paths are the
+  // ones registered in App Store Connect, so this setting is load-bearing, not
+  // cosmetic.
+  "assets": {
+    "directory": "./public",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none",
+  },
+
+  "observability": {
+    "enabled": true,
+  },
+}

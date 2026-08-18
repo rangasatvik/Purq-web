@@ -1,10 +1,10 @@
 /**
- * POST /api/waitlist — Cloudflare Pages Function.
+ * POST /api/waitlist — the waitlist signup handler.
  *
- * Runs server-side, so the Supabase key never reaches the browser. Writes to
- * a `waitlist` table via the Data API using the service role key.
+ * Runs server-side, so the Supabase key never reaches the browser. Writes to a
+ * `waitlist` table via the Data API using the service role key.
  *
- * Secrets (set in Cloudflare Pages → Settings → Environment variables):
+ * Secrets (Workers → purq-web → Settings → Variables and Secrets):
  *   SUPABASE_URL          https://<ref>.supabase.co
  *   SUPABASE_SERVICE_KEY  service role key — SECRET, never a plain variable
  *
@@ -13,13 +13,13 @@
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
-export async function onRequestPost({ request, env }) {
-  const json = (body, status = 200) =>
-    new Response(JSON.stringify(body), {
-      status,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-    })
+const json = (body, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  })
 
+export async function handleWaitlist(request, env) {
   let body
   try {
     body = await request.json()
@@ -80,10 +80,4 @@ export async function onRequestPost({ request, env }) {
   }
 
   return json({ ok: true })
-}
-
-/** Anything other than POST gets a clear answer rather than the SPA fallback. */
-export async function onRequest({ request }) {
-  if (request.method === 'POST') return onRequestPost(...arguments)
-  return new Response('Method not allowed', { status: 405, headers: { Allow: 'POST' } })
 }

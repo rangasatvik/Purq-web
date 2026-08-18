@@ -2,13 +2,17 @@
   "name": "purq-web",
   "private": true,
   "version": "0.0.0",
-  "description": "usepurq.com — static marketing site plus one Cloudflare Pages Function",
+  "description": "usepurq.com — static site served by a Cloudflare Worker, plus the waitlist endpoint",
   "type": "module",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
     "test": "node --test test/waitlist.test.js",
-    "dev": "wrangler pages dev public --port 8788"
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.124.0"
   }
 }

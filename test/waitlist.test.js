@@ -1,12 +1,15 @@
 /**
- * Tests for the waitlist Pages Function.
+ * Tests for the waitlist endpoint.
  *
- * Uses node:test, not vitest, on purpose. `web/` has no package.json and no
- * npm install by design (see web/README.md) — the site is static and the one
- * piece of logic in it should not drag a test framework into that directory.
- * Node 22 ships the runner and assertions, so this file needs nothing.
+ * Uses node:test, not vitest, on purpose. Node 22 ships the runner and the
+ * assertions, so the suite adds no dependency of its own.
  *
- *   node --test web/test/
+ * These drive the Worker's own fetch handler rather than the request handler
+ * underneath it, so path and method routing is covered by the same cases —
+ * that routing used to be the filesystem's job under Pages Functions, and
+ * moving it into code is exactly the kind of thing worth having tests on.
+ *
+ *   npm test
  *
  * The fake Supabase below models PostgREST's actual upsert behaviour rather
  * than just recording calls, because the bug this suite exists to catch was a
@@ -17,7 +20,7 @@
 import { test, describe, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { onRequestPost, onRequest } from '../functions/api/waitlist.js'
+import worker from '../src/index.js'
 
 const ENV = { SUPABASE_URL: 'https://stub.supabase.co', SUPABASE_SERVICE_KEY: 'service-role-key' }
 
@@ -91,7 +94,7 @@ beforeEach(() => {
 
 describe('POST /api/waitlist', () => {
   test('a valid email returns 200 and writes one row', async () => {
-    const res = await onRequestPost({ request: post({ email: 'vik@example.com' }), env: ENV })
+    const res = await worker.fetch(post({ email: 'vik@example.com' }), ENV)
 
     assert.equal(res.status, 200)
     assert.deepEqual(await res.json(), { ok: true })
@@ -101,10 +104,10 @@ describe('POST /api/waitlist', () => {
   })
 
   test('the honeypot returns 200 but writes nothing', async () => {
-    const res = await onRequestPost({
-      request: post({ email: 'bot@example.com', website: 'http://spam.example' }),
-      env: ENV,
-    })
+    const res = await worker.fetch(
+      post({ email: 'bot@example.com', website: 'http://spam.example' }),
+      ENV,
+    )
 
     // 200 so a bot learns nothing from the response…
     assert.equal(res.status, 200)
@@ -115,7 +118,7 @@ describe('POST /api/waitlist', () => {
   })
 
   test('a malformed email returns 400 with the friendly message', async () => {
-    const res = await onRequestPost({ request: post({ email: 'not-an-email' }), env: ENV })
+    const res = await worker.fetch(post({ email: 'not-an-email' }), ENV)
 
     assert.equal(res.status, 400)
     const body = await res.json()
@@ -125,14 +128,14 @@ describe('POST /api/waitlist', () => {
 
   test('an over-long email returns 400 even though it is well formed', async () => {
     const email = `${'a'.repeat(250)}@example.com`
-    const res = await onRequestPost({ request: post({ email }), env: ENV })
+    const res = await worker.fetch(post({ email }), ENV)
 
     assert.equal(res.status, 400)
     assert.equal(rows.length, 0)
   })
 
   test('a malformed JSON body returns 400 rather than throwing', async () => {
-    const res = await onRequestPost({ request: post('{not json'), env: ENV })
+    const res = await worker.fetch(post('{not json'), ENV)
 
     assert.equal(res.status, 400)
     assert.equal((await res.json()).error, 'Malformed request.')
@@ -140,7 +143,7 @@ describe('POST /api/waitlist', () => {
 
   test('missing env vars return 503 and never a false success', async () => {
     for (const env of [{}, { SUPABASE_URL: ENV.SUPABASE_URL }, { SUPABASE_SERVICE_KEY: 'k' }]) {
-      const res = await onRequestPost({ request: post({ email: 'vik@example.com' }), env })
+      const res = await worker.fetch(post({ email: 'vik@example.com' }), env)
 
       assert.equal(res.status, 503, `env ${JSON.stringify(env)} should be 503`)
       const body = await res.json()
@@ -153,8 +156,8 @@ describe('POST /api/waitlist', () => {
   })
 
   test('the same email twice returns 200 both times and leaves one row', async () => {
-    const first = await onRequestPost({ request: post({ email: 'twice@example.com' }), env: ENV })
-    const second = await onRequestPost({ request: post({ email: 'twice@example.com' }), env: ENV })
+    const first = await worker.fetch(post({ email: 'twice@example.com' }), ENV)
+    const second = await worker.fetch(post({ email: 'twice@example.com' }), ENV)
 
     assert.equal(first.status, 200)
     assert.equal(second.status, 200, 'a repeat signup must not surface an error')
@@ -166,7 +169,7 @@ describe('POST /api/waitlist', () => {
     // Regression guard. Without ?on_conflict=email, PostgREST infers the
     // primary key, the merge never resolves, and the duplicate test above
     // starts returning 502 to a visitor who did nothing wrong.
-    await onRequestPost({ request: post({ email: 'vik@example.com' }), env: ENV })
+    await worker.fetch(post({ email: 'vik@example.com' }), ENV)
 
     const { url, init } = calls[0]
     assert.equal(new URL(url).searchParams.get('on_conflict'), 'email')
@@ -176,73 +179,97 @@ describe('POST /api/waitlist', () => {
   test('the address is trimmed and lowercased before it is stored', async () => {
     // Case-insensitivity depends on this, because the table now has a plain
     // unique(email) rather than an index on lower(email).
-    await onRequestPost({ request: post({ email: '  ViK@Example.COM  ' }), env: ENV })
+    await worker.fetch(post({ email: '  ViK@Example.COM  ' }), ENV)
     assert.equal(rows[0].email, 'vik@example.com')
 
-    const res = await onRequestPost({ request: post({ email: 'VIK@EXAMPLE.COM' }), env: ENV })
+    const res = await worker.fetch(post({ email: 'VIK@EXAMPLE.COM' }), ENV)
     assert.equal(res.status, 200)
     assert.equal(rows.length, 1, 'different casing must not create a second row')
   })
 
   test('a Supabase failure returns 502 and an honest message', async () => {
     forceStatus = 500
-    const res = await onRequestPost({ request: post({ email: 'vik@example.com' }), env: ENV })
+    const res = await worker.fetch(post({ email: 'vik@example.com' }), ENV)
 
     assert.equal(res.status, 502)
     assert.match((await res.json()).error, /broke on our end/)
   })
 
   test('the service key is sent to Supabase and never returned to the browser', async () => {
-    const res = await onRequestPost({ request: post({ email: 'vik@example.com' }), env: ENV })
+    const res = await worker.fetch(post({ email: 'vik@example.com' }), ENV)
 
     assert.equal(calls[0].init.headers.apikey, ENV.SUPABASE_SERVICE_KEY)
     assert.doesNotMatch(await res.text(), /service-role-key/)
   })
 
   test('responses are marked no-store', async () => {
-    const res = await onRequestPost({ request: post({ email: 'vik@example.com' }), env: ENV })
+    const res = await worker.fetch(post({ email: 'vik@example.com' }), ENV)
     assert.equal(res.headers.get('Cache-Control'), 'no-store')
   })
 
   test('cf-ipcountry and referer are recorded, and referer is capped', async () => {
-    await onRequestPost({
-      request: post(
+    await worker.fetch(
+      post(
         { email: 'vik@example.com' },
         { 'cf-ipcountry': 'GB', referer: `https://ref.example/${'x'.repeat(600)}` },
       ),
-      env: ENV,
-    })
+      ENV,
+    )
 
     assert.equal(rows[0].country, 'GB')
     assert.equal(rows[0].referrer.length, 500)
   })
 
   test('absent cf headers become null rather than empty strings', async () => {
-    await onRequestPost({ request: post({ email: 'vik@example.com' }), env: ENV })
+    await worker.fetch(post({ email: 'vik@example.com' }), ENV)
 
     assert.equal(rows[0].country, null)
     assert.equal(rows[0].referrer, null)
   })
 })
 
-describe('other methods', () => {
-  test('GET returns 405 with an Allow header', async () => {
-    const res = await onRequest({
-      request: new Request('https://usepurq.com/api/waitlist', { method: 'GET' }),
-      env: ENV,
-    })
+describe('routing', () => {
+  // Under Pages Functions the filesystem did this. Now src/index.js does, so
+  // it needs covering like any other branch.
+  const req = (method, path) => new Request(`https://usepurq.com${path}`, { method })
+
+  test('GET /api/waitlist returns 405 with an Allow header', async () => {
+    const res = await worker.fetch(req('GET', '/api/waitlist'), ENV)
 
     assert.equal(res.status, 405)
     assert.equal(res.headers.get('Allow'), 'POST')
+    assert.equal(rows.length, 0)
   })
 
-  test('onRequest still handles POST, passing env through', async () => {
-    // Pages runs the method-specific handler when there is one, but onRequest
-    // delegates as well — and it destructures only `request`, so this is the
-    // test that catches env being dropped on the way through.
-    const res = await onRequest({ request: post({ email: 'vik@example.com' }), env: ENV })
+  for (const method of ['PUT', 'DELETE', 'PATCH']) {
+    test(`${method} /api/waitlist is refused, not silently accepted`, async () => {
+      const res = await worker.fetch(req(method, '/api/waitlist'), ENV)
+      assert.equal(res.status, 405)
+      assert.equal(rows.length, 0)
+    })
+  }
 
-    assert.equal(res.status, 200)
-    assert.equal(rows.length, 1)
+  test('an unknown path 404s rather than hitting the handler', async () => {
+    // Static assets are served before the Worker runs, so anything reaching
+    // this handler genuinely matched no file in public/.
+    const res = await worker.fetch(req('GET', '/nope'), ENV)
+
+    assert.equal(res.status, 404)
+    assert.equal(rows.length, 0)
+  })
+
+  test('a near-miss path is not treated as the endpoint', async () => {
+    for (const path of ['/api/waitlist/', '/api/Waitlist', '/api/waitlist2']) {
+      const res = await worker.fetch(
+        new Request(`https://usepurq.com${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'vik@example.com' }),
+        }),
+        ENV,
+      )
+      assert.equal(res.status, 404, `${path} must not reach the handler`)
+    }
+    assert.equal(rows.length, 0)
   })
 })
